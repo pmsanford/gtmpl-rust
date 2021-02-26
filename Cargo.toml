@@ -24,6 +24,7 @@ percent-encoding = "2"
 gtmpl_value = "0.5"
 anyhow = "1"
 thiserror = "1"
+walkdir = "2.3.1"
 
 [dev-dependencies]
 gtmpl_derive = "0.5"
