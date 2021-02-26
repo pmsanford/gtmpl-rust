@@ -45,6 +45,11 @@ macro_rules! nodes {
                     $(Nodes::$name(ref t) => t.tree(),)*
                 }
             }
+            pub fn children(&self) -> Option<Vec<Nodes>> {
+                match *self {
+                    $(Nodes::$name(ref t) => t.children(),)*
+                }
+            }
         }
     }
 }
@@ -161,6 +166,9 @@ impl ListNode {
             nodes: vec![],
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        Some(self.nodes.clone())
+    }
     pub fn is_empty_tree(&self) -> Result<bool, NodeError> {
         for n in &self.nodes {
             match n.is_empty_tree() {
@@ -195,6 +203,9 @@ impl TextNode {
             text,
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
+    }
 }
 
 impl Display for TextNode {
@@ -223,6 +234,11 @@ impl PipeNode {
 
     pub fn append(&mut self, cmd: CommandNode) {
         self.cmds.push(cmd);
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        let decl = self.decl.iter().map(|x| Nodes::Variable(x.clone()));
+        let cmds = self.cmds.iter().map(|x| Nodes::Command(x.clone()));
+        Some(decl.chain(cmds).collect())
     }
 }
 
@@ -266,6 +282,9 @@ impl ActionNode {
             pipe,
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        Some(vec![Nodes::Pipe(self.pipe.clone())])
+    }
 }
 
 impl Display for ActionNode {
@@ -292,6 +311,9 @@ impl CommandNode {
 
     pub fn append(&mut self, node: Nodes) {
         self.args.push(node);
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        Some(self.args.clone())
     }
 }
 
@@ -330,6 +352,9 @@ impl IdentifierNode {
         self.tr = tr;
         self
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
+    }
 }
 
 impl Display for IdentifierNode {
@@ -353,6 +378,9 @@ impl VariableNode {
             ident: ident.split('.').map(|s| s.to_owned()).collect(),
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
+    }
 }
 
 impl Display for VariableNode {
@@ -370,6 +398,9 @@ impl DotNode {
             tr,
             pos,
         }
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
     }
 }
 
@@ -394,6 +425,9 @@ impl NilNode {
             tr,
             pos,
         }
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
     }
 }
 
@@ -420,6 +454,9 @@ impl FieldNode {
                 })
                 .collect(),
         }
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
     }
 }
 
@@ -451,6 +488,9 @@ impl ChainNode {
         let val = val.trim_start_matches('.').to_owned();
         self.field.push(val);
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        Some(vec![(*self.node).clone()])
+    }
 }
 
 impl Display for ChainNode {
@@ -480,6 +520,9 @@ impl BoolNode {
             pos,
             value: Value::from(val),
         }
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
     }
 }
 
@@ -604,6 +647,9 @@ impl NumberNode {
             }
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
+    }
 }
 
 impl Display for NumberNode {
@@ -627,6 +673,9 @@ impl StringNode {
             value: Value::from(text),
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
+    }
 }
 
 impl Display for StringNode {
@@ -645,6 +694,9 @@ impl EndNode {
             pos,
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
+    }
 }
 
 impl Display for EndNode {
@@ -662,6 +714,9 @@ impl ElseNode {
             tr,
             pos,
         }
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        None
     }
 }
 
@@ -734,6 +789,17 @@ impl BranchNode {
             else_list,
         }
     }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        let mut nodes = vec![
+            Nodes::Pipe(self.pipe.clone()),
+            Nodes::List(self.list.clone()),
+        ];
+        if let Some(ref elist) = self.else_list {
+            nodes.push(Nodes::List(elist.clone()));
+        }
+
+        Some(nodes)
+    }
 }
 
 impl Display for BranchNode {
@@ -772,6 +838,20 @@ impl TemplateNode {
             pos,
             name,
             pipe,
+        }
+    }
+    pub fn children(&self) -> Option<Vec<Nodes>> {
+        let mut nodes = Vec::new();
+        if let PipeOrString::Pipe(ref pn) = self.name {
+            nodes.push(Nodes::Pipe(pn.clone()));
+        }
+        if let Some(ref pn) = self.pipe {
+            nodes.push(Nodes::Pipe(pn.clone()))
+        }
+        if nodes.is_empty() {
+            None
+        } else {
+            Some(nodes)
         }
     }
 }

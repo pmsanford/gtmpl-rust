@@ -12,7 +12,7 @@ mod exec;
 #[doc(inline)]
 pub mod funcs;
 mod lexer;
-mod node;
+pub mod node;
 mod parse;
 mod print_verb;
 mod printf;
